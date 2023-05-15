@@ -9,10 +9,14 @@ inputs:
   upstream:
     description: <user>/<repo> or the full HTTP URL
     required: false
-  branch:
+  branch-source:
     description: The upstream branch that is rebased on
     required: false
-    default:  master
+    default:  main
+  branch-target:
+    description: The downstream branch that is being rebased
+    required: false
+    default:  main
   depth:
     description: Greater than the number of commits the upstream made in a period
     required: false
@@ -43,13 +47,17 @@ runs:
 
         git remote add upstream $UPSTREAM;
 
-        git fetch upstream ${{ inputs.branch }} $DEPTH;
+        git fetch upstream ${{ inputs.branch-source }} $DEPTH;
 
         git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com";
         git config --local user.name  "GitHub Actions";
-
-        git rebase upstream/${{ inputs.branch }};
-
+        
+        if [ "${{ inputs.branch-source }}" != "${{ inputs.branch-target }}" ]; then
+          git rebase ${{ inputs.branch-target }} --onto upstream/${{ inputs.branch-source }}
+        else
+          git rebase upstream/${{ inputs.branch-source }};
+        fi
+        
         if [ "${{ inputs.push }}" = "true" -a "$(git status | grep diverged)" ]; then
             git push origin $(git branch --show-current) --force-with-lease;
         fi;
